@@ -262,7 +262,8 @@ extern "C"
 		tm_double aircraft_rateofturn = 0;
 		tm_double simulation_time = 0;
 		tm_vector3d aircraft_angularvelocity;
-		tm_vector3d aircraft_velocity;
+		tm_vector3d aircraft_velocity_body;
+		tm_vector3d aircraft_velocity_world;
 
 		for (const auto& message : MessageListReceive) {
 			if (message.GetID() == MessageAircraftPitch.GetID()) { aircraft_pitch = message.GetDouble(); }
@@ -270,7 +271,15 @@ extern "C"
 			else if (message.GetID() == MessageAircraftRateOfTurn.GetID()) { aircraft_rateofturn = message.GetDouble(); }
 			else if (message.GetID() == MessageAircraftAngularVelocity.GetID()) { aircraft_angularvelocity = message.GetVector3d(); } //Aircraft.Acceleration would be a better information, but the api gives only 1 value per secound
 			else if (message.GetID() == MessageSimulationTime.GetID()) { simulation_time = message.GetDouble(); } //Aircraft.Acceleration would be a better information, but the api gives only 1 value per secound
-			else if (message.GetID() == MessageAircraftVelocity.GetID()) { aircraft_velocity = message.GetVector3d(); } //Aircraft.Acceleration would be a better information, but the api gives only 1 value per secound
+			else if (message.GetID() == MessageAircraftVelocity.GetID()) { 
+				if(message.GetFlags().HasFlags(tm_msg_flag::Body)){
+					aircraft_velocity_body = message.GetVector3d();
+				}
+				else {
+					aircraft_velocity_world = message.GetVector3d();
+				}
+			
+			} //Aircraft.Acceleration would be a better information, but the api gives only 1 value per secound
 			// for possible values see list of messages at line 73 and following ...
 		}
 
@@ -295,10 +304,10 @@ extern "C"
 			msg.type = 5;
 
 			tm_vector3d delta_velocity;
-			delta_velocity.x = aircraft_velocity.x - last_aircraft_velocity.x;
-			delta_velocity.y = aircraft_velocity.y - last_aircraft_velocity.y;
-			delta_velocity.z = aircraft_velocity.z - last_aircraft_velocity.z;
-			last_aircraft_velocity = aircraft_velocity;
+			delta_velocity.x = aircraft_velocity_body.x - last_aircraft_velocity.x;
+			delta_velocity.y = aircraft_velocity_body.y - last_aircraft_velocity.y;
+			delta_velocity.z = aircraft_velocity_body.z - last_aircraft_velocity.z;
+			last_aircraft_velocity = aircraft_velocity_body;
 
 			//msg.timestamp = (uint32_t)(simulation_time * 1000000.0);
 			msg.rx = (float)aircraft_bank;
