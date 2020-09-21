@@ -309,7 +309,7 @@ extern "C"
 			delta_velocity.z = aircraft_velocity_body.z - last_aircraft_velocity.z;
 			last_aircraft_velocity = aircraft_velocity_body;
 
-			//msg.timestamp = (uint32_t)(simulation_time * 1000000.0);
+			msg.timestamp = (uint32_t)(simulation_time * 1000000.0);
 			msg.rx = (float)aircraft_bank;
 			msg.ry = (float)aircraft_rateofturn;
 			msg.rz = (float)aircraft_pitch;
@@ -328,7 +328,7 @@ extern "C"
 				for (int i = TRACE_LOG_SIZE - 1; i > 0; i--) {
 					dd_out.tracelog[i] = dd_out.tracelog[i-1];
 				}
-				dd_out.tracelog[0] = delta_velocity;
+				dd_out.tracelog[0] = aircraft_velocity_body;
 			}
 
 		}
