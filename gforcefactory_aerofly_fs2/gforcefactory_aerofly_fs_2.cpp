@@ -328,7 +328,7 @@ extern "C"
 				for (int i = TRACE_LOG_SIZE - 1; i > 0; i--) {
 					dd_out.tracelog[i] = dd_out.tracelog[i-1];
 				}
-				dd_out.tracelog[0] = aircraft_velocity_body;
+				dd_out.tracelog[0] = delta_velocity;
 			}
 
 		}
