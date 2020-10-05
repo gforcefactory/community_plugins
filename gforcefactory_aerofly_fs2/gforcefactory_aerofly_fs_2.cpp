@@ -175,8 +175,8 @@ void DebugOutput_Draw(HDC hDC)
 	}
 
 	float y = 4;
-	DebugDrawFloat(y, graphics, L"counter: ", dd.counter);
-	DebugDrawFloat(y, graphics, L"time: ", dd.time);
+	DebugDrawFloat(y, graphics, L"counter: ", (float)dd.counter);
+	DebugDrawFloat(y, graphics, L"time: ", (float)dd.time);
 	for (int i = 0; i < TRACE_LOG_SIZE; i++) {
 		DebugDrawVector(y, graphics, L"trace: ", dd.tracelog[i]);
 	}
@@ -187,7 +187,10 @@ void DebugOutput_Draw(HDC hDC)
 }
 
 tm_vector3d last_aircraft_velocity;
-
+bool first_packet = true;
+tm_double last_aircraft_pitch = 0;
+tm_double last_aircraft_bank = 0;
+tm_double last_aircraft_rateofturn = 0;
 //////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // interface functions to Aerofly FS 2
@@ -202,14 +205,14 @@ extern "C"
 
 	__declspec(dllexport) bool Aerofly_FS_2_External_DLL_Init(const HINSTANCE Aerofly_FS_2_hInstance)
 	{
-		DebugOutput_WindowOpen();
+		//DebugOutput_WindowOpen();
 		memset(&dd_out, 0, sizeof(dd_out));
 		return true;
 	}
 
 	__declspec(dllexport) void Aerofly_FS_2_External_DLL_Shutdown()
 	{
-		DebugOutput_WindowClose();
+		//DebugOutput_WindowClose();
 	}
 
 	int resolvehelper(const char* hostname, int family, const char* service, sockaddr_storage* pAddr)
@@ -282,8 +285,13 @@ extern "C"
 			} //Aircraft.Acceleration would be a better information, but the api gives only 1 value per secound
 			// for possible values see list of messages at line 73 and following ...
 		}
-
+		
 		if (!MessageListReceive.empty()) {
+
+			if (first_packet) {
+				simulation_time = 0.0;
+				first_packet = false;
+			}
 
 			int result = 0;
 			SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -293,7 +301,7 @@ extern "C"
 			result = bind(sock, (sockaddr*)&addrListen, sizeof(addrListen));
 			if (result == -1) { int lasterror = errno; }
 			sockaddr_storage addrDest = {};
-			result = resolvehelper("192.168.0.17", AF_INET, "50001", &addrDest); //4123 is the local plugin port
+			result = resolvehelper("192.168.0.14", AF_INET, "50001", &addrDest); //4123 is the local plugin port
 			if (result != 0) { int lasterror = errno; }
 			tm_double altitude = -1;
 
@@ -304,18 +312,23 @@ extern "C"
 			msg.type = 5;
 
 			tm_vector3d delta_velocity;
-			delta_velocity.x = aircraft_velocity_body.x - last_aircraft_velocity.x;
-			delta_velocity.y = aircraft_velocity_body.y - last_aircraft_velocity.y;
-			delta_velocity.z = aircraft_velocity_body.z - last_aircraft_velocity.z;
+			float delta_scale = 0.1;
+
+			delta_velocity.x = (aircraft_velocity_body.x - last_aircraft_velocity.x)*delta_scale;
+			delta_velocity.y = (aircraft_velocity_body.y - last_aircraft_velocity.y)*delta_scale;
+			delta_velocity.z = (aircraft_velocity_body.z - last_aircraft_velocity.z)*delta_scale;
 			last_aircraft_velocity = aircraft_velocity_body;
 
 			msg.timestamp = (uint32_t)(simulation_time * 1000000.0);
-			msg.rx = (float)aircraft_bank;
-			msg.ry = (float)aircraft_rateofturn;
-			msg.rz = (float)aircraft_pitch;
-			msg.tx = 0.0;
-			msg.ty = 0.0;
-			msg.tz = 0.0;
+
+			float hang_scale = 20.0;
+			msg.rx = (float)(aircraft_angularvelocity.x);  // is pitch
+			msg.ry = (float)(aircraft_angularvelocity.y); // yaw
+			msg.rz = (float)(-aircraft_angularvelocity.z); // bank 
+			msg.tx = (float)(delta_velocity.x - sin(-aircraft_pitch)* hang_scale);
+			msg.ty = (float)(delta_velocity.y + sin(aircraft_bank) * hang_scale);
+			msg.tz = (float)(delta_velocity.z);
+
 
 			int msg_len = sizeof(edge_motion);
 			result = sendto(sock, (const char*)&msg, msg_len, 0, (sockaddr*)&addrDest, sizeof(addrDest));
