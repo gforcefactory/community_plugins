@@ -53,6 +53,7 @@
 static HINSTANCE global_hDLLinstance = NULL;
 
 #include "tm_debugwindow.h"
+#include "..\gforcefactory_api.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -78,20 +79,6 @@ BOOL WINAPI DllMain(HANDLE hdll, DWORD reason, LPVOID reserved)
 }
 
 
-#pragma pack(1)
-struct edge_motion {
-	uint8_t header;
-	uint8_t packet_version;
-	uint8_t motion_type;
-	uint8_t type;
-	uint32_t timestamp;
-	float tx;
-	float ty;
-	float tz;
-	float rx;
-	float ry;
-	float rz;
-};
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -215,24 +202,7 @@ extern "C"
 		//DebugOutput_WindowClose();
 	}
 
-	int resolvehelper(const char* hostname, int family, const char* service, sockaddr_storage* pAddr)
-	{
-		int result = 0;
-		addrinfo* result_list = NULL;
-		addrinfo hints = {};
-		hints.ai_family = family;
-		hints.ai_socktype = SOCK_DGRAM; // without this flag, getaddrinfo will return 3x the number of addresses (one for each socket type).
-		result = getaddrinfo(hostname, service, &hints, &result_list);
-		if (result == 0)
-		{
-			//ASSERT(result_list->ai_addrlen <= sizeof(sockaddr_in));
-			memcpy(pAddr, result_list->ai_addr, result_list->ai_addrlen);
-			freeaddrinfo(result_list);
-		}
-
-		return result;
-	}
-
+	
 	__declspec(dllexport) void Aerofly_FS_2_External_DLL_Update(const tm_double         delta_time,
 		const tm_uint8* const  message_list_received_byte_stream,
 		const tm_uint32         message_list_received_byte_stream_size,
@@ -293,23 +263,6 @@ extern "C"
 				first_packet = false;
 			}
 
-			int result = 0;
-			SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
-			char szIP[100] = "";
-			sockaddr_in addrListen = {}; // zero-int, sin_port is 0, which picks a random port for bind.
-			addrListen.sin_family = AF_INET;
-			result = bind(sock, (sockaddr*)&addrListen, sizeof(addrListen));
-			if (result == -1) { int lasterror = errno; }
-			sockaddr_storage addrDest = {};
-			result = resolvehelper("192.168.0.14", AF_INET, "50001", &addrDest); //4123 is the local plugin port
-			if (result != 0) { int lasterror = errno; }
-			tm_double altitude = -1;
-
-			edge_motion msg;
-			msg.header = 'G';
-			msg.packet_version = 0;
-			msg.motion_type = 'M';
-			msg.type = 5;
 
 			tm_vector3d delta_velocity;
 			float delta_scale = 0.1;
@@ -319,9 +272,14 @@ extern "C"
 			delta_velocity.z = (aircraft_velocity_body.z - last_aircraft_velocity.z)*delta_scale;
 			last_aircraft_velocity = aircraft_velocity_body;
 
-			msg.timestamp = (uint32_t)(simulation_time * 1000000.0);
-
 			float hang_scale = 20.0;
+
+			edge_motion msg;
+			msg.header = 'G';
+			msg.packet_version = 0;
+			msg.motion_type = 'M';
+			msg.type = 5;
+			msg.timestamp = (uint32_t)(((uint64_t)(simulation_time * 1000000.0))&0x1ffffff);
 			msg.rx = (float)(aircraft_angularvelocity.x);  // is pitch
 			msg.ry = (float)(aircraft_angularvelocity.y); // yaw
 			msg.rz = (float)(-aircraft_angularvelocity.z); // bank 
@@ -329,9 +287,7 @@ extern "C"
 			msg.ty = (float)(delta_velocity.y + sin(aircraft_bank) * hang_scale);
 			msg.tz = (float)(delta_velocity.z);
 
-
-			int msg_len = sizeof(edge_motion);
-			result = sendto(sock, (const char*)&msg, msg_len, 0, (sockaddr*)&addrDest, sizeof(addrDest));
+			send_edge_motion_message(msg);
 
 			// send the debug info
 			{
