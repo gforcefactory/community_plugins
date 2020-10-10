@@ -113,7 +113,7 @@ void CALLBACK MyDispatchProcRD(SIMCONNECT_RECV* pData, DWORD cbData, void *pCont
                     }
                     else {
                         uint64_t time = (uint64_t)GetCounter();
-                        if(time > 10000000){
+                        if(time > 1000000){
                             StartCounter();
                             time = 0;
                         }

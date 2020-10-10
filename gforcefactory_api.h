@@ -42,4 +42,5 @@ void send_edge_motion_message(edge_motion& msg) {
 	resolvehelper("192.168.0.14", AF_INET, "50001", &addrDest); //4123 is the local plugin port
 	int msg_len = sizeof(edge_motion);
 	sendto(sock, (const char*)&msg, msg_len, 0, (sockaddr*)&addrDest, sizeof(addrDest));
+	closesocket(sock);
 }
