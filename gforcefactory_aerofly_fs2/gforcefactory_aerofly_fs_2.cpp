@@ -278,7 +278,7 @@ extern "C"
 			msg.header = 'G';
 			msg.packet_version = 0;
 			msg.motion_type = 'M';
-			msg.type = 5;
+			msg.type = 4;
 			msg.timestamp = (uint32_t)(((uint64_t)(simulation_time * 1000000.0))&0x1ffffff);
 			msg.rx = (float)(aircraft_angularvelocity.x);  // is pitch
 			msg.ry = (float)(aircraft_angularvelocity.y); // yaw
