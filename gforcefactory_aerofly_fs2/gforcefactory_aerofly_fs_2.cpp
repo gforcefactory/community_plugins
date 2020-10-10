@@ -265,27 +265,37 @@ extern "C"
 
 
 			tm_vector3d delta_velocity;
-			float delta_scale = 0.1;
 
-			delta_velocity.x = (aircraft_velocity_body.x - last_aircraft_velocity.x)*delta_scale;
-			delta_velocity.y = (aircraft_velocity_body.y - last_aircraft_velocity.y)*delta_scale;
-			delta_velocity.z = (aircraft_velocity_body.z - last_aircraft_velocity.z)*delta_scale;
+			#define KNOTS2MS 0.514444
+			#define UPDATE_PERIOD_SEC 0.1
+
+			float delta_scale = KNOTS2MS / UPDATE_PERIOD_SEC;
+
+			delta_velocity.x = (aircraft_velocity_body.x - last_aircraft_velocity.x) * delta_scale;
+			delta_velocity.y = (aircraft_velocity_body.y - last_aircraft_velocity.y) * delta_scale;
+			delta_velocity.z = (aircraft_velocity_body.z - last_aircraft_velocity.z) * delta_scale;
 			last_aircraft_velocity = aircraft_velocity_body;
 
-			float hang_scale = 20.0;
+			#define gForce 9.81
+			double gx, gy;
 
 			edge_motion msg;
 			msg.header = 'G';
 			msg.packet_version = 0;
 			msg.motion_type = 'M';
 			msg.type = 4;
-			msg.timestamp = (uint32_t)(((uint64_t)(simulation_time * 1000000.0))&0x1ffffff);
-			msg.rx = (float)(aircraft_angularvelocity.x);  // is pitch
-			msg.ry = (float)(aircraft_angularvelocity.y); // yaw
-			msg.rz = (float)(-aircraft_angularvelocity.z); // bank 
-			msg.tx = (float)(delta_velocity.x - sin(-aircraft_pitch)* hang_scale);
-			msg.ty = (float)(delta_velocity.y + sin(aircraft_bank) * hang_scale);
-			msg.tz = (float)(delta_velocity.z);
+			msg.timestamp = (uint32_t)(((uint64_t)(simulation_time * 1000000.0)) & 0x1ffffff);
+
+			msg.rx = (float)(aircraft_angularvelocity.x); // roll
+			msg.ry = (float)(aircraft_angularvelocity.y); // pitch
+			msg.rz = (float)(aircraft_angularvelocity.z); // yaw
+
+			gx = -sin(-aircraft_pitch) * gForce;
+			gy = sin(aircraft_bank) * gForce;
+
+			msg.tx = (float)(delta_velocity.x + gx);
+			msg.ty = (float)(-delta_velocity.y + gy);
+			msg.tz = (float)(-delta_velocity.z);
 
 			send_edge_motion_message(msg);
 
