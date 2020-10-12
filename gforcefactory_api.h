@@ -35,11 +35,14 @@ int resolvehelper(const char* hostname, int family, const char* service, sockadd
 
 void send_edge_motion_message(edge_motion& msg) {
 	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
+	char broadcast = 1;
+	setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
 	sockaddr_in addrListen = {}; // zero-int, sin_port is 0, which picks a random port for bind.
 	addrListen.sin_family = AF_INET;
 	bind(sock, (sockaddr*)&addrListen, sizeof(addrListen));
 	sockaddr_storage addrDest = {};
 	resolvehelper("EDGE6D", AF_INET, "50001", &addrDest); //4123 is the local plugin port
+	resolvehelper("255.255.255.255", AF_INET, "50001", &addrDest); //4123 is the local plugin port
 	int msg_len = sizeof(edge_motion);
 	sendto(sock, (const char*)&msg, msg_len, 0, (sockaddr*)&addrDest, sizeof(addrDest));
 	closesocket(sock);
