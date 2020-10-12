@@ -263,7 +263,6 @@ extern "C"
 				first_packet = false;
 			}
 
-
 			tm_vector3d delta_velocity;
 
 			#define KNOTS2MS 0.514444
