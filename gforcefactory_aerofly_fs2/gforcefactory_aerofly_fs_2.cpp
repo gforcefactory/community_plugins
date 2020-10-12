@@ -265,17 +265,16 @@ extern "C"
 
 			tm_vector3d delta_velocity;
 
-			#define KNOTS2MS 0.514444
-			#define UPDATE_PERIOD_SEC 0.1
+			#define UPDATE_FREQ 10//defined by AeroFly
 
-			float delta_scale = KNOTS2MS / UPDATE_PERIOD_SEC;
+			float delta_scale = UPDATE_FREQ;
 
 			delta_velocity.x = (aircraft_velocity_body.x - last_aircraft_velocity.x) * delta_scale;
 			delta_velocity.y = (aircraft_velocity_body.y - last_aircraft_velocity.y) * delta_scale;
 			delta_velocity.z = (aircraft_velocity_body.z - last_aircraft_velocity.z) * delta_scale;
 			last_aircraft_velocity = aircraft_velocity_body;
 
-			#define gForce 9.81
+			#define gForceFactor 9.81*1.5 //gravity effect
 			double gx, gy;
 
 			edge_motion msg;
@@ -289,8 +288,8 @@ extern "C"
 			msg.ry = (float)(aircraft_angularvelocity.y); // pitch
 			msg.rz = (float)(aircraft_angularvelocity.z); // yaw
 
-			gx = -sin(-aircraft_pitch) * gForce;
-			gy = sin(aircraft_bank) * gForce;
+			gx = -sin(-aircraft_pitch) * gForceFactor;
+			gy = sin(aircraft_bank) * gForceFactor;
 
 			msg.tx = (float)(delta_velocity.x + gx);
 			msg.ty = (float)(-delta_velocity.y + gy);
