@@ -265,7 +265,7 @@ extern "C"
 
 			tm_vector3d delta_velocity;
 
-			#define UPDATE_FREQ 10//defined by AeroFly
+			#define UPDATE_FREQ 10//defined by AeroFly FS 2
 
 			float delta_scale = UPDATE_FREQ;
 
