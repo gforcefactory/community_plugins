@@ -155,9 +155,6 @@ void CALLBACK MyDispatchProcRD(SIMCONNECT_RECV* pData, DWORD cbData, void *pCont
                     printf(".");
 //                    printf("%d v:%0.1f %.1f %.1f a:%.1f %.1f %.1f o:%.1f %.1f %.1f r:%.1f %.1f %.1f\n", msg.timestamp,  pS->vel_x, pS->vel_y, pS->vel_z, pS->acc_x, pS->acc_y, pS->acc_z, pS->orient_x, pS->orient_y, pS->orient_z, pS->rotspd_x, pS->rotspd_y, pS->rotspd_z);
 
-//                    printf("%d %0.1f %0.1f %0.1f %0.1f %0.1f %0.1f\n", msg.timestamp, msg.tx, msg.ty, msg.tz, msg.rx, msg.ry, msg.rz);
-//                    printf("%d acc_x:%0.1f acc_y:%.1f acc_z:%.1f rot_x:%.1f rot_y:%.1f rot_z:%.1f\n", msg.timestamp,  pS->acc_x, pS->acc_y, pS->acc_z, pS->rot_x, pS->rot_y, pS->rot_z);
-
                     break;
                 }
 
