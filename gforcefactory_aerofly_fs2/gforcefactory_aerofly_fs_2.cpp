@@ -118,6 +118,14 @@ struct debug_data {
 static debug_data  dd_out;
 static std::mutex  debug_data_mutex;
 
+struct msg_aerofly_t {
+	char header[4];//G01,
+	uint32_t timestamp;
+	float vel[3];
+	float orient[3];
+	float rot_vel[3];
+};
+
 void DebugDrawFloat(float &y, Gdiplus::Graphics& graphics, WCHAR* title, float value)
 {
 	Gdiplus::FontFamily fontFamily(L"Courier New");
@@ -243,7 +251,7 @@ extern "C"
 			else if (message.GetID() == MessageAircraftBank.GetID()) { aircraft_bank = message.GetDouble();  if (aircraft_bank > 3) aircraft_bank -= 6; }
 			else if (message.GetID() == MessageAircraftRateOfTurn.GetID()) { aircraft_rateofturn = message.GetDouble(); }
 			else if (message.GetID() == MessageAircraftAngularVelocity.GetID()) { aircraft_angularvelocity = message.GetVector3d(); } //Aircraft.Acceleration would be a better information, but the api gives only 1 value per secound
-			else if (message.GetID() == MessageSimulationTime.GetID()) { simulation_time = message.GetDouble(); } //Aircraft.Acceleration would be a better information, but the api gives only 1 value per secound
+			else if (message.GetID() == MessageSimulationTime.GetID()) { simulation_time = message.GetDouble(); }
 			else if (message.GetID() == MessageAircraftVelocity.GetID()) { 
 				if(message.GetFlags().HasFlags(tm_msg_flag::Body)){
 					aircraft_velocity_body = message.GetVector3d();
@@ -263,39 +271,28 @@ extern "C"
 				first_packet = false;
 			}
 
-			tm_vector3d delta_velocity;
+			msg_aerofly_t  msg;
 
-			#define UPDATE_FREQ 10//defined by AeroFly FS 2
+			msg.header[0] = 'G';
+			msg.header[1] = '0';//Aerofly FS 2
+			msg.header[2] = '1';//Aerofly FS 2
+			msg.header[3] = ',';
 
-			float delta_scale = UPDATE_FREQ;
-
-			delta_velocity.x = (aircraft_velocity_body.x - last_aircraft_velocity.x) * delta_scale;
-			delta_velocity.y = (aircraft_velocity_body.y - last_aircraft_velocity.y) * delta_scale;
-			delta_velocity.z = (aircraft_velocity_body.z - last_aircraft_velocity.z) * delta_scale;
-			last_aircraft_velocity = aircraft_velocity_body;
-
-			#define gForceFactor 9.81*1.5 //gravity effect
-			double gx, gy;
-
-			edge_motion msg;
-			msg.header = 'G';
-			msg.packet_version = 0;
-			msg.motion_type = 'M';
-			msg.type = 4;
 			msg.timestamp = (uint32_t)(((uint64_t)(simulation_time * 1000000.0)) & 0x1ffffff);
 
-			msg.rx = (float)(aircraft_angularvelocity.x); // roll
-			msg.ry = (float)(aircraft_angularvelocity.y); // pitch
-			msg.rz = (float)(aircraft_angularvelocity.z); // yaw
+			msg.vel[0] = (float) (aircraft_velocity_body.x);
+			msg.vel[1] = (float)(aircraft_velocity_body.y);
+			msg.vel[2] = (float)(aircraft_velocity_body.z);
 
-			gx = -sin(-aircraft_pitch) * gForceFactor;
-			gy = sin(aircraft_bank) * gForceFactor;
+			msg.orient[0] = (float)(aircraft_bank);
+			msg.orient[1] = (float)(aircraft_pitch);
+			msg.orient[2] = (float)(aircraft_rateofturn);
 
-			msg.tx = (float)(delta_velocity.x + gx);
-			msg.ty = (float)(-delta_velocity.y + gy);
-			msg.tz = (float)(-delta_velocity.z);
+			msg.rot_vel[0] = (float)(aircraft_angularvelocity.x);
+			msg.rot_vel[1] = (float)(aircraft_angularvelocity.y);
+			msg.rot_vel[2] = (float)(aircraft_angularvelocity.z);
 
-			send_edge_motion_message(msg);
+			send_edge_motion_message((char*) &msg,sizeof(msg_aerofly_t));
 
 			// send the debug info
 			{
@@ -305,7 +302,7 @@ extern "C"
 				for (int i = TRACE_LOG_SIZE - 1; i > 0; i--) {
 					dd_out.tracelog[i] = dd_out.tracelog[i-1];
 				}
-				dd_out.tracelog[0] = delta_velocity;
+				dd_out.tracelog[0] = aircraft_velocity_body;
 			}
 
 		}
