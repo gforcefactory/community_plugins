@@ -70,6 +70,14 @@ struct Struct1
 };
  bool is_first_msg = true;
 
+typedef struct edge_motion_ {
+     char header[3];//G2,
+     uint32_t timestamp;
+     float vel[3];
+     float acc[3];
+     float orient[3];
+     float rotspd[3];
+} edge_motion_t;
 
 void CALLBACK MyDispatchProcRD(SIMCONNECT_RECV* pData, DWORD cbData, void *pContext)
 {
@@ -109,11 +117,11 @@ void CALLBACK MyDispatchProcRD(SIMCONNECT_RECV* pData, DWORD cbData, void *pCont
                     hr = SimConnect_RequestDataOnSimObjectType(hSimConnect, REQUEST_1, DEFINITION_1, 0, SIMCONNECT_SIMOBJECT_TYPE_USER);
 
                     // lets write it to the platform
-                    edge_motion msg;
-                    msg.header = 'G';
-                    msg.packet_version = 0;
-                    msg.motion_type = 'M';
-                    msg.type = 4;
+                    edge_motion_t msg;
+                    msg.header[0] = 'G';
+                    msg.header[1] = '2';
+                    msg.header[2] = ',';
+
                     if (is_first_msg) {
                         msg.timestamp = 0;
                         is_first_msg = false;
@@ -126,51 +134,29 @@ void CALLBACK MyDispatchProcRD(SIMCONNECT_RECV* pData, DWORD cbData, void *pCont
                         }
                         msg.timestamp = (uint32_t)time;
                     }
-//                    msg.rx = (float)(pS->rot_x) * 0.1f;  // is pitch
-//                    msg.ry = (float)(pS->rot_y) * 0.1f; // yaw
-//                    msg.rz = (float)(-pS->rot_z) * 0.1f; // bank 
 
-//                    msg.tx = (float)(pS->acc_y);// -sin(-aircraft_pitch) * hang_scale);
-//                    msg.ty = (float)(pS->acc_x)*3.0f;// +sin(aircraft_bank) * hang_scale);
-//                    msg.tz = (float)(pS->acc_z);
+                    msg.vel[0] = (float) (pS->vel_x);
+                    msg.vel[1] = (float) (pS->vel_y);
+                    msg.vel[2] = (float) (pS->vel_z);
 
-                    float vel[3], acc[3], orient[3], rotspd[3];
+                    msg.acc[0] = (float) (pS->acc_x);
+                    msg.acc[1] = (float) (pS->acc_y);
+                    msg.acc[2] = (float) (pS->acc_z);
 
-                    vel[0] = (float) (pS->vel_x);
-                    vel[1] = (float) (pS->vel_y);
-                    vel[2] = (float)-(pS->vel_z);
+                    msg.orient[0] = (float) (pS->orient_x);
+                    msg.orient[1] = (float) (pS->orient_y);
+                    msg.orient[2] = (float) (pS->orient_z);
 
-                    acc[0] = (float)(pS->acc_x);
-                    acc[1] = (float)-(pS->acc_y);
-                    acc[2] = (float)(pS->acc_z);
+                    msg.rotspd[0] = (float) (pS->rotspd_x);
+                    msg.rotspd[1] = (float) (pS->rotspd_y);
+                    msg.rotspd[2] = (float) (pS->rotspd_z);
 
-                    orient[0] = (float)-(pS->orient_x);
-                    orient[1] = (float)(pS->orient_y);
-                    orient[2] = (float)(pS->orient_z);
+                    send_edge_motion_message((char*) &msg,sizeof(edge_motion_t));
+                    printf(".");
+//                    printf("%d v:%0.1f %.1f %.1f a:%.1f %.1f %.1f o:%.1f %.1f %.1f r:%.1f %.1f %.1f\n", msg.timestamp,  pS->vel_x, pS->vel_y, pS->vel_z, pS->acc_x, pS->acc_y, pS->acc_z, pS->orient_x, pS->orient_y, pS->orient_z, pS->rotspd_x, pS->rotspd_y, pS->rotspd_z);
 
-                    rotspd[0] = (float)-(pS->rotspd_x);
-                    rotspd[1] = (float)(pS->rotspd_y);
-                    rotspd[2] = (float)(pS->rotspd_z);
-
-                    float gx, gy;
-                    #define gForceFactor 9.81
-
-                    gx = -sin(orient[1]) * gForceFactor;
-                    gy =  sin(orient[0]) * gForceFactor;
-
-                    msg.tx = acc[0] + gx;
-                    msg.ty = acc[1] + 2*gy;
-                    msg.tz = acc[2];
-
-                    msg.rx = rotspd[0];
-                    msg.ry = rotspd[1];
-                    msg.rz = rotspd[2];
-
-                    send_edge_motion_message(msg);
-                    printf("%d %0.1f %0.1f %0.1f %0.1f %0.1f %0.1f\n", msg.timestamp, msg.tx, msg.ty, msg.tz, msg.rx, msg.ry, msg.rz);
-
+//                    printf("%d %0.1f %0.1f %0.1f %0.1f %0.1f %0.1f\n", msg.timestamp, msg.tx, msg.ty, msg.tz, msg.rx, msg.ry, msg.rz);
 //                    printf("%d acc_x:%0.1f acc_y:%.1f acc_z:%.1f rot_x:%.1f rot_y:%.1f rot_z:%.1f\n", msg.timestamp,  pS->acc_x, pS->acc_y, pS->acc_z, pS->rot_x, pS->rot_y, pS->rot_z);
-
 
                     break;
                 }
