@@ -1,6 +1,7 @@
 #pragma once
 
 #pragma pack(1)
+/*
 struct edge_motion {
 	uint8_t header;
 	uint8_t packet_version;
@@ -14,6 +15,7 @@ struct edge_motion {
 	float ry;
 	float rz;
 };
+*/
 
 int resolvehelper(const char* hostname, int family, const char* service, sockaddr_storage* pAddr)
 {
@@ -33,7 +35,7 @@ int resolvehelper(const char* hostname, int family, const char* service, sockadd
 	return result;
 }
 
-void send_edge_motion_message(edge_motion& msg) {
+void send_edge_motion_message(char* msg, uint32_t msg_len) {
 	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
 	char broadcast = 1;
 	setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
@@ -41,8 +43,7 @@ void send_edge_motion_message(edge_motion& msg) {
 	addrListen.sin_family = AF_INET;
 	bind(sock, (sockaddr*)&addrListen, sizeof(addrListen));
 	sockaddr_storage addrDest = {};
-	resolvehelper("255.255.255.255", AF_INET, "50001", &addrDest); //4123 is the local plugin port
-	int msg_len = sizeof(edge_motion);
-	sendto(sock, (const char*)&msg, msg_len, 0, (sockaddr*)&addrDest, sizeof(addrDest));
+	resolvehelper("255.255.255.255", AF_INET, "50010", &addrDest); //4123 is the local plugin port
+	sendto(sock, (const char*) msg, msg_len, 0, (sockaddr*)&addrDest, sizeof(addrDest));
 	closesocket(sock);
 }
